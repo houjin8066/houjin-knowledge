@@ -1,0 +1,39 @@
+{
+  "owner": "晋哥",
+  "email": "houjin8066@qq.com",
+  "digestTime": "07:00",
+  "timezone": "Asia/Shanghai",
+  "categories": [
+    "ai-models",
+    "ai-coding", 
+    "ai-tools",
+    "ai-research",
+    "ai-news",
+    "skills",
+    "mcp",
+    "tutorials",
+    "opinions"
+  ],
+  "sources": {
+    "news": [
+      "Hacker News",
+      "GitHub Trending",
+      "arXiv",
+      "Reddit"
+    ],
+    "projects": [
+      "GitHub"
+    ],
+    "skills": [
+      "ClawdHub",
+      "GitHub clawdbot/skills",
+      "Community Skills"
+    ],
+    "mcp": [
+      "MCP Hub",
+      "GitHub modelcontextprotocol",
+      "Awesome MCP Servers"
+    ]
+  },
+  "cronJobId": "a7d22727-c738-479b-aa8c-a1908737ea66"
+}
