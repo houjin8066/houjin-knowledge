@@ -14,7 +14,7 @@ import os
 SMTP_SERVER = "smtp.qq.com"
 SMTP_PORT = 465
 SENDER_EMAIL = "houjin8066@qq.com"
-SENDER_PASSWORD = "kzgtmyfjrgyxcfec"
+SENDER_PASSWORD = "gpygddbireelbihf"
 RECEIVER_EMAIL = "houjin8066@qq.com"
 
 def send_digest_email(subject: str, content: str) -> bool:
