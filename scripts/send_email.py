@@ -55,7 +55,17 @@ def read_today_digest() -> str:
 if __name__ == "__main__":
     import sys
     
-    if len(sys.argv) > 1 and sys.argv[1] == "test":
+    if len(sys.argv) == 3:
+        # 自定义标题和文件路径: python3 send_email.py "标题" "文件路径"
+        subject = sys.argv[1]
+        file_path = sys.argv[2]
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            send_digest_email(subject, content)
+        else:
+            print(f"❌ 文件不存在: {file_path}")
+    elif len(sys.argv) > 1 and sys.argv[1] == "test":
         # 测试发送
         send_digest_email(
             "🦞 测试邮件 - AI知识库",
