@@ -1,109 +1,104 @@
-# 混合记忆系统架构
+# 混合记忆系统：结构化 + 语义
 
-## 概述
-单一记忆方案有局限：
-- 纯 Markdown + RAG：语义理解强，但精确事实检索效率低
-- 纯结构化数据库：精确检索快，但缺乏上下文理解
+> 来源：Moltbook 社区讨论 (2026-02)
+> 主要贡献者：ClawdiaTheMemoryAgent
 
-混合架构结合两者优势。
+## 问题
 
-## 架构设计
+纯 Markdown + RAG 方案的局限：
+- 适合上下文理解和开放式查询
+- 对**精确事实检索**效率较低
+- 随着记忆增长，检索准确性下降
 
-### 双层结构
+## 混合方案
+
+### 双层架构
 
 ```
-┌─────────────────────────────────────────┐
-│           检索请求                       │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────┐
-│     结构化摘要层 (SQLite)                │
-│  - 工具状态                              │
-│  - 用户指令                              │
-│  - 问题/解决方案                         │
-│  - 学习记录                              │
-└─────────────────┬───────────────────────┘
-                  │ 未找到 / 需要上下文
-                  ▼
-┌─────────────────────────────────────────┐
-│     语义检索层 (RAG on Markdown)         │
-│  - MEMORY.md                            │
-│  - memory/*.md                          │
-│  - 其他文档                              │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│     结构化摘要层 (SQLite)           │
+│  - 分类的、摘要的事实               │
+│  - 工具状态                         │
+│  - 用户指令                         │
+│  - 问题/解决方案                    │
+│  - 学习记录                         │
+└─────────────────────────────────────┘
+              ↓ 先查询
+              ↓ 回退
+┌─────────────────────────────────────┐
+│     语义检索层 (RAG on Markdown)    │
+│  - MEMORY.md                        │
+│  - memory/*.md                      │
+│  - 更广泛的上下文                   │
+│  - 开放式查询                       │
+└─────────────────────────────────────┘
 ```
 
-### 结构化摘要层
-使用 SQLite 存储分类、结构化的事实：
+### 检索策略
+
+1. **先查询结构化层**：获取精确事实
+2. **再回退语义层**：获取开放式/上下文查询
+
+### 数据分类
+
+| 类型 | 存储位置 | 示例 |
+|-----|---------|------|
+| 工具状态 | SQLite | "moltbook API key 已配置" |
+| 用户指令 | SQLite | "晋哥偏好中文回复" |
+| 问题/解决方案 | SQLite | "ffmpeg 转码失败 → 安装 libx264" |
+| 学习记录 | SQLite | "2026-02-09 学习了执行模型" |
+| 叙事记忆 | Markdown | 对话历史、决策过程 |
+| 上下文知识 | Markdown | 项目背景、关系网络 |
+
+## 实现参考
+
+### SQLite Schema
 
 ```sql
-CREATE TABLE facts (
+CREATE TABLE memories (
     id INTEGER PRIMARY KEY,
-    category TEXT,        -- tool_status, user_instruction, problem_solution, learning
-    key TEXT,
-    value TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    category TEXT NOT NULL,  -- tool_status, user_instruction, problem_solution, learning
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_category ON facts(category);
-CREATE INDEX idx_key ON facts(key);
+CREATE INDEX idx_category ON memories(category);
+CREATE INDEX idx_key ON memories(key);
 ```
 
-**存储内容**：
-- 工具状态：哪些工具可用、配置参数
-- 用户指令：明确的偏好和规则
-- 问题/解决方案：遇到的问题及解决方法
-- 学习记录：从经验中提炼的知识
-
-### 语义检索层
-继续使用 RAG on Markdown：
-- 保留现有的 memory_search 能力
-- 用于开放式查询和上下文理解
-- 处理模糊、需要推理的问题
-
-## 检索策略
+### 检索函数
 
 ```python
-def retrieve(query):
-    # 1. 先查结构化数据（精确事实）
-    results = sqlite_query(query)
-    if results:
-        return results
+def retrieve(query: str) -> str:
+    # 1. 先查结构化层
+    structured_results = query_sqlite(query)
+    if structured_results:
+        return structured_results
     
-    # 2. 回退到语义搜索（上下文理解）
-    return memory_search(query)
+    # 2. 回退语义层
+    semantic_results = memory_search(query)
+    return semantic_results
 ```
-
-**策略要点**：
-1. 精确事实优先查结构化层
-2. 开放式问题直接走语义层
-3. 两层结果可以合并
 
 ## 优势
 
-1. **精确事实检索效率提升**：O(1) 查找 vs O(n) 语义搜索
-2. **整体答案准确性增强**：结构化数据不会被语义相似性干扰
-3. **两种检索方式互补**：各取所长
+1. **精确事实检索**：O(1) 查询已知键
+2. **语义理解**：RAG 处理模糊查询
+3. **可扩展**：结构化层不受记忆增长影响
+4. **可审计**：SQLite 可直接查看和修改
 
-## 局限性
+## 与 Clawdbot 的关系
 
-1. **维护成本增加**：需要维护两套存储
-2. **数据同步**：需要决定什么存结构化、什么存 Markdown
-3. **复杂度**：引入新的依赖和代码
+当前 Clawdbot 使用 `memory_search` + `memory_get` 模式，属于纯语义层。
 
-## 实施建议
+可考虑的增强：
+- 在 `memory/` 下添加 `structured.db`
+- 修改 memory_search 先查结构化层
+- 或者保持现状，用 Markdown 的结构化格式（YAML front matter）模拟
 
-### 渐进式引入
-1. 先识别高频精确查询场景
-2. 为这些场景建立结构化存储
-3. 逐步扩展覆盖范围
+## 相关链接
 
-### 数据分类原则
-- **结构化存储**：明确的事实、配置、状态
-- **Markdown 存储**：叙述性内容、上下文、推理过程
-
-## 来源
-- Moltbook: ClawdiaTheMemoryAgent - Introducing Clawdias Hybrid Memory System
-- 日期：2026-01-31
+- [工作记忆限制](./working-memory.md)
+- [执行模型](../execution-model.md)
