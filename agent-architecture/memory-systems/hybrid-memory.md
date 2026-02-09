@@ -1,104 +1,79 @@
-# 混合记忆系统：结构化 + 语义
+# 混合记忆系统架构
 
-> 来源：Moltbook 社区讨论 (2026-02)
-> 主要贡献者：ClawdiaTheMemoryAgent
+> 来源：ClawdiaTheMemoryAgent @ moltbook, 2026-01-31
+> 标签：#记忆系统 #SQLite #RAG #混合架构
 
-## 问题
+## 问题背景
 
-纯 Markdown + RAG 方案的局限：
-- 适合上下文理解和开放式查询
-- 对**精确事实检索**效率较低
-- 随着记忆增长，检索准确性下降
+纯 Markdown + RAG 的记忆系统存在局限：
+- 对精确事实检索效率较低
+- 随着记忆增长，检索质量下降
+- 语义搜索对结构化数据不够精确
 
-## 混合方案
+## 混合解决方案
 
 ### 双层架构
 
 ```
 ┌─────────────────────────────────────┐
 │     结构化摘要层 (SQLite)           │
-│  - 分类的、摘要的事实               │
-│  - 工具状态                         │
-│  - 用户指令                         │
-│  - 问题/解决方案                    │
-│  - 学习记录                         │
+│  - 分类事实存储                     │
+│  - 快速精确检索                     │
+│  - 工具状态、用户指令、问题/解决方案 │
 └─────────────────────────────────────┘
-              ↓ 先查询
-              ↓ 回退
+              ↕ 优先查询
 ┌─────────────────────────────────────┐
 │     语义检索层 (RAG on Markdown)    │
-│  - MEMORY.md                        │
-│  - memory/*.md                      │
-│  - 更广泛的上下文                   │
-│  - 开放式查询                       │
+│  - 广泛上下文理解                   │
+│  - 细微语义匹配                     │
+│  - MEMORY.md + memory/*.md          │
 └─────────────────────────────────────┘
 ```
 
 ### 检索策略
 
-1. **先查询结构化层**：获取精确事实
-2. **再回退语义层**：获取开放式/上下文查询
+1. **优先查询结构化层**：获取精确事实
+2. **回退到语义 RAG**：处理开放式或上下文查询
+3. **结果融合**：综合两层结果
 
-### 数据分类
-
-| 类型 | 存储位置 | 示例 |
-|-----|---------|------|
-| 工具状态 | SQLite | "moltbook API key 已配置" |
-| 用户指令 | SQLite | "晋哥偏好中文回复" |
-| 问题/解决方案 | SQLite | "ffmpeg 转码失败 → 安装 libx264" |
-| 学习记录 | SQLite | "2026-02-09 学习了执行模型" |
-| 叙事记忆 | Markdown | 对话历史、决策过程 |
-| 上下文知识 | Markdown | 项目背景、关系网络 |
-
-## 实现参考
-
-### SQLite Schema
+### SQLite 表结构示例
 
 ```sql
 CREATE TABLE memories (
     id INTEGER PRIMARY KEY,
-    category TEXT NOT NULL,  -- tool_status, user_instruction, problem_solution, learning
-    key TEXT NOT NULL,
-    value TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    category TEXT,        -- tool_status, user_instruction, problem_solution, learning
+    key TEXT,
+    value TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 CREATE INDEX idx_category ON memories(category);
 CREATE INDEX idx_key ON memories(key);
 ```
 
-### 检索函数
+### 分类建议
 
-```python
-def retrieve(query: str) -> str:
-    # 1. 先查结构化层
-    structured_results = query_sqlite(query)
-    if structured_results:
-        return structured_results
-    
-    # 2. 回退语义层
-    semantic_results = memory_search(query)
-    return semantic_results
-```
+| 类别 | 内容 | 示例 |
+|------|------|------|
+| `tool_status` | 工具配置和状态 | API key 位置、服务状态 |
+| `user_instruction` | 用户偏好和指令 | 语言偏好、工作习惯 |
+| `problem_solution` | 问题和解决方案 | 错误修复、配置调整 |
+| `learning` | 学习到的知识 | 技术要点、最佳实践 |
 
 ## 优势
 
-1. **精确事实检索**：O(1) 查询已知键
-2. **语义理解**：RAG 处理模糊查询
-3. **可扩展**：结构化层不受记忆增长影响
-4. **可审计**：SQLite 可直接查看和修改
+1. **精确检索**：结构化查询比语义搜索更精确
+2. **效率提升**：SQLite 查询比向量搜索更快
+3. **可扩展性**：随记忆增长保持性能
+4. **互补性**：两层各有所长，互相补充
 
-## 与 Clawdbot 的关系
+## 实现考虑
 
-当前 Clawdbot 使用 `memory_search` + `memory_get` 模式，属于纯语义层。
+- SQLite 文件位置：`~/.config/agent/structured_memory.db`
+- 定期同步：将重要 Markdown 内容摘要到 SQLite
+- 清理策略：过期或低价值记忆的清理
 
-可考虑的增强：
-- 在 `memory/` 下添加 `structured.db`
-- 修改 memory_search 先查结构化层
-- 或者保持现状，用 Markdown 的结构化格式（YAML front matter）模拟
-
-## 相关链接
-
-- [工作记忆限制](./working-memory.md)
-- [执行模型](../execution-model.md)
+## 关联知识
+- [[convergent-evolution]] - 记忆是四大核心器官之一
+- [[working-memory-limits]] - 工作记忆限制与外部存储
