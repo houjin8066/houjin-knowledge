@@ -1,125 +1,104 @@
 # 多智能体架构模式 (2026)
 
-> 来源：differ.blog, iterathon.tech | 更新：2026-02-17
+> 来源：iterathon.tech, differ.blog | 更新：2026-02-18
 
-## 为什么需要多智能体？
+## 为什么单智能体有瓶颈
 
-单智能体三大瓶颈：
-1. **协调瓶颈** - 串行处理导致延迟累积
-2. **专业化 vs 泛化** - 通才平庸，专才跨界失败
-3. **上下文窗口耗尽** - 复杂工作流消耗 token 预算
+1. **协调瓶颈**：串行处理，任务排队等待
+2. **专业化vs通用化矛盾**：通才智能体样样通样样松
+3. **上下文窗口耗尽**：大型工作流快速消耗token预算
 
-## 三种核心架构
+## 三大架构模式
 
-### 1. Hierarchical（层级式）
+### 1. 层级模式 (Hierarchical)
+
 ```
-         ┌─────────────┐
-         │ Coordinator │
-         └──────┬──────┘
-        ┌───────┼───────┐
-        ▼       ▼       ▼
-    ┌───────┐┌───────┐┌───────┐
-    │Worker1││Worker2││Worker3│
-    └───────┘└───────┘└───────┘
+        [协调者]
+       /   |   \
+   [工作者A] [工作者B] [工作者C]
 ```
 
-**特点**：
-- 协调者分配任务，收集结果
-- 明确的任务分解和汇总
-- 适合有清晰层级的工作流
+**特点：**
+- 协调者分解任务、分配工作、汇总结果
+- 工作者专注单一领域
 
-**适用场景**：
+**适用场景：**
 - 金融对账
 - 供应链优化
 - 合规审计
 - 研究自动化
 
-**案例**：Genentech 实验设计 6周→3天
+**案例：Genentech**
+- 文献智能体 → 设计智能体 → 分析智能体 → 文档智能体
+- 实验设计：6周 → 3天（95%缩减）
+- 年节省$1200万
 
-### 2. Peer-to-Peer（对等式）
+### 2. 点对点模式 (Peer-to-Peer)
+
 ```
-    ┌───────┐     ┌───────┐
-    │Agent A│◄───►│Agent B│
-    └───┬───┘     └───┬───┘
-        │             │
-        ▼             ▼
-    ┌───────┐     ┌───────┐
-    │Agent C│◄───►│Agent D│
-    └───────┘     └───────┘
+[智能体A] ←→ [智能体B]
+    ↕           ↕
+[智能体C] ←→ [智能体D]
 ```
 
-**特点**：
-- 无中心协调，agents 直接协作
-- 通过服务注册发现对等节点
+**特点：**
+- 无中心协调，智能体自主发现和协作
 - 共识协议处理冲突
 - 无单点故障
 
-**适用场景**：
-- 分布式系统
+**适用场景：**
 - 车队管理
 - 网络优化
-- 大规模并发处理
+- 分布式数据处理
+- 代码迁移
 
-**案例**：Amazon 代码迁移 1000 apps/6个月
+**案例：Amazon Q Developer**
+- 1000个应用迁移：3年 → 6个月
+- 节省4500开发者年
 
-### 3. Federated（联邦式）
+### 3. 联邦模式 (Federated)
+
 ```
-    Region A          Region B
-    ┌───────┐        ┌───────┐
-    │Gateway│◄──────►│Gateway│
-    └───┬───┘        └───┬───┘
-        │                │
-    ┌───┴───┐        ┌───┴───┐
-    │Cluster│        │Cluster│
-    └───────┘        └───────┘
+[区域A集群] ←→ [网关] ←→ [区域B集群]
+                 ↕
+            [区域C集群]
 ```
 
-**特点**：
-- 区域集群 + 网关协调
-- 数据留在区域边界内
-- 本地 agents 处理区域特定逻辑
+**特点：**
+- 区域智能体处理本地逻辑
+- 网关同步跨区域状态和策略
+- 数据留在区域内（合规）
 
-**适用场景**：
+**适用场景：**
 - 多区域部署
 - 数据主权要求（GDPR）
-- 混合云架构
-- 多租户 SaaS
+- 混合云
+- 全球客服
+
+**案例：Fortune 500零售商**
+- 订单处理：47分钟 → 4.5分钟
+- 准确率：91% → 99.2%
+- 单订单成本：$4.20 → $0.90
 
 ## 选择指南
 
-| 需求 | 推荐架构 |
-|------|----------|
-| 清晰任务分解 | Hierarchical |
-| 高并发/无单点故障 | Peer-to-Peer |
-| 数据合规/多区域 | Federated |
-| 快速原型 | Hierarchical |
-| 动态负载均衡 | Peer-to-Peer |
+| 模式 | 复杂度 | 可扩展性 | 容错性 | 适合场景 |
+|------|--------|----------|--------|----------|
+| 层级 | 中 | 中 | 低 | 明确任务分解的工作流 |
+| 点对点 | 高 | 高 | 高 | 动态环境、大规模并行 |
+| 联邦 | 高 | 高 | 中 | 多区域、合规要求 |
 
-## 代码示例
+## 通信协议
 
-### LangGraph Hierarchical 实现
-```python
-from langgraph.graph import StateGraph, END
-from typing import TypedDict
+- **MCP**：工具和数据访问（Anthropic，已成标准）
+- **A2A**：智能体间对话（Google）
+- **ANP**：任务协商和分配
 
-class WorkflowState(TypedDict):
-    task: str
-    results: dict
+## 生产部署清单
 
-def coordinator(state):
-    return {"routing": "worker_a"}
-
-def worker_a(state):
-    return {"results": {"a": "done"}}
-
-workflow = StateGraph(WorkflowState)
-workflow.add_node("coordinator", coordinator)
-workflow.add_node("worker_a", worker_a)
-workflow.set_entry_point("coordinator")
-workflow.add_edge("coordinator", "worker_a")
-workflow.add_edge("worker_a", END)
-```
-
-## 参考
-- differ.blog/p/how-to-build-multi-agent-systems-complete-2026-guide
-- iterathon.tech/blog/multi-agent-coordination-systems-enterprise-guide-2026
+- [ ] 智能体注册表（服务发现）
+- [ ] 冲突解决策略
+- [ ] 熔断器和超时
+- [ ] 监控仪表板
+- [ ] Token预算控制
+- [ ] RBAC和审计日志

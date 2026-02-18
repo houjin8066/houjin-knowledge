@@ -1,119 +1,92 @@
 # AI Agent 框架对比 (2026)
 
-> 来源：differ.blog, capsolver.com | 更新：2026-02-17
+> 来源：capsolver.com, differ.blog | 更新：2026-02-18
 
 ## 框架分类
 
-### 多智能体编排类
+### 多智能体编排
 
-#### LangGraph
-- **架构**：状态机 + 显式边定义 agent 转换
-- **最佳场景**：复杂条件分支、需要审计追踪（金融、医疗）
-- **优势**：可视化工作流、内置检查点、状态恢复
-- **劣势**：学习曲线陡峭、需要预先设计工作流
-- **采用率**：40% LangGraph 部署使用多智能体图
+| 框架 | 架构风格 | 最佳场景 | 核心优势 |
+|------|----------|----------|----------|
+| **CrewAI** | 角色协作 | 内容创作、市场研究 | 直观的团队隐喻，快速上手 |
+| **AutoGen** | 对话/协商 | 技术问题、代码生成 | 灵活的智能体通信 |
+| **MetaGPT** | 软件公司模拟 | 端到端软件开发 | 生成完整文档+代码 |
+
+### RAG/数据中心
+
+| 框架 | 架构风格 | 最佳场景 | 核心优势 |
+|------|----------|----------|----------|
+| **LlamaIndex** | 索引检索 | 私有数据问答 | 强大的数据摄取和检索 |
+| **LangChain** | 组件链接 | 快速原型、工具集成 | 生态最丰富 |
+
+### 底层控制
+
+| 框架 | 架构风格 | 最佳场景 | 核心优势 |
+|------|----------|----------|----------|
+| **LangGraph** | 状态机/图 | 复杂工作流、自我纠错 | 精细控制非线性执行 |
+| **Semantic Kernel** | 技能+规划器 | 企业应用AI集成 | 与现有代码库无缝集成 |
+| **Pydantic-AI** | 输出验证 | 结构化输出 | 确保JSON/对象格式正确 |
+| **SmolAgents** | 代码智能体 | 轻量原型 | 最小依赖，代码优先 |
+
+## 详细分析
+
+### LangGraph - 复杂状态工作流首选
 
 ```python
-from langgraph.graph import StateGraph, START, END
-
 workflow = StateGraph(AgentState)
 workflow.add_node("research", researcher)
 workflow.add_node("analyze", analyzer)
-workflow.add_edge(START, "research")
 workflow.add_edge("research", "analyze")
-workflow.add_edge("analyze", END)
-app = workflow.compile()
 ```
 
-#### CrewAI
-- **架构**：角色 + 目标 + 背景故事
-- **最佳场景**：内容创作、市场研究、模拟人类团队
-- **优势**：直观的角色模型、自动协调、快速原型
-- **劣势**：非线性工作流灵活性较低
-- **增长**：企业采用增长 250%
+**优势：**
+- 内置持久化和状态恢复
+- 可视化工作流
+- 支持人工审批节点
+
+**适用：** 合规工作流、需要审计追踪的系统
+
+### CrewAI - 角色协作首选
 
 ```python
-from crewai import Agent, Task, Crew
-
-researcher = Agent(
-    role="Market Researcher",
-    goal="Find latest AI trends",
-    backstory="Expert at market analysis"
-)
-crew = Crew(agents=[researcher], tasks=[...])
-result = crew.kickoff()
+researcher = Agent(role="研究员", goal="...", backstory="...")
+writer = Agent(role="写手", goal="...", backstory="...")
+crew = Crew(agents=[researcher, writer], tasks=[...])
 ```
 
-#### AutoGen (Microsoft)
-- **架构**：对话式多智能体，agents 相互消息传递
-- **最佳场景**：技术问题、代码生成、研究系统
-- **优势**：灵活通信模式、人机协作、异步协作
-- **采用**：45,000+ GitHub stars，Novo Nordisk 生产使用
+**优势：**
+- 高层抽象，自动处理协调
+- 非技术人员也能理解
+- 2025年企业采用增长250%
 
-#### MetaGPT
-- **架构**：虚拟软件公司（PM、架构师、工程师）
-- **最佳场景**：端到端软件开发
-- **优势**：生成完整文档 + 代码
-- **劣势**：高度固化，灵活性有限
+**适用：** 内容团队、营销自动化
 
-### RAG/数据中心类
+### AutoGen - 对话式多智能体首选
 
-#### LlamaIndex
-- **定位**：LLM 应用的数据框架
-- **最佳场景**：私有数据问答、文档检索
-- **优势**：强大的索引和检索策略
-- **必要性**：任何依赖外部数据的 agent 项目都需要
+**优势：**
+- 事件驱动、异步协作
+- 智能体可辩论、迭代
+- 45000+ GitHub stars
 
-#### LangChain
-- **定位**：通用组件框架
-- **最佳场景**：快速原型、工具集成
-- **优势**：最成熟、最大生态系统
-- **角色**：很多其他框架的基础层
+**适用：** 研究系统、头脑风暴、代码审查
 
-### 低级控制类
+## 2026趋势
 
-#### Semantic Kernel (Microsoft)
-- **定位**：将 LLM 能力集成到现有应用
-- **语言**：C#, Python, Java
-- **最佳场景**：企业现有系统 AI 注入
-- **优势**：Planner 自动链接函数和 AI prompts
+1. **模块化组合**：不再依赖单一框架
+   - LangGraph（控制流）+ LlamaIndex（RAG）+ 专用工具
 
-#### Pydantic-AI
-- **定位**：确保 LLM 输出符合预定义结构
-- **角色**：几乎所有现代框架的关键组件
-- **解决问题**：可靠的输出解析
+2. **MCP标准化**：工具访问统一协议
+   - Linux基金会 Agentic AI Foundation 推动
 
-#### SmolAgents (Hugging Face)
-- **定位**：轻量级、最小依赖
-- **架构**：CodeAgent - 模型写并执行 Python 代码
-- **最佳场景**：快速原型、简单自动化
-- **优势**：完全控制、避免框架抽象
+3. **开放标准**：框架间互操作性增强
 
-## 快速选择指南
+## 选择建议
 
 | 需求 | 推荐框架 |
 |------|----------|
-| 复杂工作流 + 审计 | LangGraph |
-| 团队协作模拟 | CrewAI |
-| 对话式协作 | AutoGen |
-| 私有数据 RAG | LlamaIndex |
-| 快速原型 | LangChain / SmolAgents |
+| 快速原型 | CrewAI / SmolAgents |
+| 复杂工作流 | LangGraph |
+| 数据密集 | LlamaIndex + LangChain |
 | 企业集成 | Semantic Kernel |
-| 软件开发自动化 | MetaGPT |
-
-## 组合使用建议
-
-常见组合：
-- **LangGraph + LlamaIndex** - 复杂工作流 + 数据检索
-- **CrewAI + Pydantic-AI** - 角色协作 + 结构化输出
-- **LangChain + 任意框架** - 作为基础组件层
-
-## 市场数据
-
-- AI agents 市场：$7.63B (2025) → $182.97B (2033)
-- CAGR：49.6%
-- 2026 年底：40% 企业应用包含 AI agents
-
-## 参考
-- differ.blog/p/how-to-build-multi-agent-systems-complete-2026-guide
-- capsolver.com/blog/AI/top-9-ai-agent-frameworks-in-2026
+| 研究探索 | AutoGen |
+| 可视化开发 | Langflow |
